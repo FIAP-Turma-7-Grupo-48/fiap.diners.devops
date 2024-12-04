@@ -29,6 +29,7 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
+    create_iam_roles = true
     eks-cluster-fiap-turma-7-grupo-48 = {
       # Starting on 1.30, AL2023 is the default AMI type for EKS managed node groups
       ami_type       = "AL2023_x86_64_STANDARD"
@@ -37,6 +38,8 @@ module "eks" {
       min_size     = 2
       max_size     = 10
       desired_size = 2
+
+      create_node_iam_role= true
     }
   }
 
