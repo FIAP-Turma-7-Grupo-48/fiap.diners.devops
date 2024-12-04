@@ -45,10 +45,7 @@
 
 name: 'Provision AWS EKS Cluster using Terraform'
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
+on: workflow_dispatch
 
 permissions:
   contents: read
