@@ -70,7 +70,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        sparse-checkout: 'terraform/eks/**'
+        sparse-checkout: 'terraform/eks/'
         sparse-checkout-cone-mode: false
 
     # This step is needed because expo-github-action does not support paths.
@@ -79,7 +79,7 @@ jobs:
       run: |
         ls -lah
         shopt -s dotglob
-        mv terraform/eks/** .
+        mv terraform/eks/* .
         rm -rf terraform/eks
         rm -rf terraform/
         ls -lah
