@@ -11,14 +11,14 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  name   = "ex-eks-mng"
-  region = "eu-west-1"
+  name   = "eks-cluster-fiap-turma-7-grupo-48"
+  region = "us-east-1"
 
   vpc_cidr = "10.0.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
-    Example    = local.name
+    eks-cluster-fiap-turma-7-grupo-48    = local.name
     GithubRepo = "terraform-aws-eks"
     GithubOrg  = "terraform-aws-modules"
   }
