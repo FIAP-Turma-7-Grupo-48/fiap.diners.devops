@@ -70,8 +70,19 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        sparse-checkout: './terraform/eks/**'
+        sparse-checkout: 'terraform/eks/**'
         sparse-checkout-cone-mode: false
+
+    # This step is needed because expo-github-action does not support paths.
+    # Therefore all mobile app assets should be moved to the project root.
+    - name: Move terraform files to root
+      run: |
+        ls -lah
+        shopt -s dotglob
+        mv terraform/eks/** .
+        rm -rf terraform/eks
+        rm -rf terraform/
+        ls -lah
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
