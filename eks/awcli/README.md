@@ -30,7 +30,7 @@ aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output "text" --query "Vpc.VpcId"
 ```
 ## Subnets
 
-### Subnet 1
+### Private Subnet 1
 ```sh
 aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId"
 ```
@@ -54,7 +54,7 @@ aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.1.0/24 
     }
 }
 ```
-### Subnet 2
+### Private Subnet 2
 
 ```sh
 aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId"
@@ -80,7 +80,140 @@ aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.2.0/24 
 }
 ```
 
+### Private Subnet 1
+```sh
+aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.1.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId"
+```
+
+```json
+{
+    "Subnet": {
+        "AvailabilityZone": "us-east-1a",
+        "AvailabilityZoneId": "use1-az4",
+        "AvailableIpAddressCount": 251,
+        "CidrBlock": "10.0.1.0/24",
+        "DefaultForAz": false,
+        "MapPublicIpOnLaunch": false,
+        "State": "available",
+        "SubnetId": "subnet-04570f251274be1b0",
+        "VpcId": "vpc-00ea71bb2fa2415fe",
+        "OwnerId": "008152407463",
+        "AssignIpv6AddressOnCreation": false,
+        "Ipv6CidrBlockAssociationSet": [],
+        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-04570f251274be1b0"
+    }
+}
+```
+### public Subnet 2
+
+```sh
+aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.1.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId"
+```
+
+```json
+{
+    "Subnet": {
+        "AvailabilityZone": "us-east-1b",
+        "AvailabilityZoneId": "use1-az6",
+        "AvailableIpAddressCount": 251,
+        "CidrBlock": "10.0.2.0/24",
+        "DefaultForAz": false,
+        "MapPublicIpOnLaunch": false,
+        "State": "available",
+        "SubnetId": "subnet-07148fe87dff0c263",
+        "VpcId": "vpc-00ea71bb2fa2415fe",
+        "OwnerId": "008152407463",
+        "AssignIpv6AddressOnCreation": false,
+        "Ipv6CidrBlockAssociationSet": [],
+        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-07148fe87dff0c263"
+    }
+}
+```
+
+## Internet Gateway
+
+```sh
+aws ec2 create-internet-gateway -region us-east-1
+```
+
+```json
+
+```
+
+## Attach Internet Gateway to VPC
+
+```sh
+aws ec2 attach-internet-gateway -vpc-id vpc-XXXXXX -internet-gateway-id igw-XXXXXX -region us-east-1
+```
+
+```json
+
+```
+
+## Create Route Table
+
+```sh
+aws ec2 create-route-table -vpc-id vpc-XXXXXX -region us-east-1
+```
+
+```json
+
+```
+
+## Create Route Table
+
+```sh
+aws ec2 create-route-table -vpc-id vpc-XXXXXX -region us-east-1
+```
+
+```json
+
+```
+
+## Create Public Route Table
+
+```sh
+aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id igw-XXXXXX -region us-east-1
+
+```
+
+```json
+
+```
+
+## Associate Route Table to Subnet
+
+```sh
+aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id igw-XXXXXX -region us-east-1
+
+```
+
+```json
+
+```
+
+## Allocate Elastic IP
+
+```sh
+aws ec2 allocate-address --domain vpc
+```
+
+```json
+
+```
+
+## Create NAT Gateway and Associate it with public Subnet
+
+```sh
+aws ec2 create-nat-gateway --subnet-id subnet-XXXXXX --allocation-id eipalloc-XXXXXX
+```
+
+```json
+
+```
+
 ## Security Group
+
 ```sh
 aws ec2 create-security-group --group-name eks-node-group --description "EKS Node Group" --vpc-id "vpc-00ea71bb2fa2415fe" --output "text" --query "GroupId"
 ```
