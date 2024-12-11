@@ -1,10 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rabbitmq
-  namespace: rabbitmq 
+  name: rabbitmq-deployment
+  namespace: rabbitmq
+  labels:
+    app: rabbitmq
 spec:
-  replicas: 1 
+  replicas: 1
   selector:
     matchLabels:
       app: rabbitmq

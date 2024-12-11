@@ -1,96 +1,122 @@
 # AWCLI EKS Multi Node Cluster Provisioning
 
+----------
+
 ## Network
+
+----------
 
 ### VPC
 
 ```sh
-VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output "text" --query "Vpc.VpcId")
-echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
+VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region us-east-1 --output "text" --query "Vpc.VpcId")
+echo "VPC_ID=$VPC_ID" # >> $GITHUB_ENV
 ```
+
+----------
 
 ### Subnets
 
 #### Private Subnet 1
 
 ```sh
-PRIV_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId")
-echo "PRIV_SUBNET_ID_1=$PRIV_SUBNET_ID_1" >> $GITHUB_ENV
+PRIVATE_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --region us-east-1 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId")
+echo "PRIVATE_SUBNET_ID=$PRIVATE_SUBNET_ID" # >> $GITHUB_ENV
 ```
 
-#### Private Subnet 2
+#### Public Subnet
 
 ```sh
-PRIV_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId")
-echo "PRIV_SUBNET_ID_2=$PRIV_SUBNET_ID_2" >> $GITHUB_ENV
+PUBLIC_SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.100.0/24 --region us-east-1 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId")
+echo "PUBLIC_SUBNET_ID=$PUBLIC_SUBNET_ID" # >> $GITHUB_ENV
 ```
 
-#### Public Subnet 1
-
-```sh
-PUB_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.1.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId")
-echo "PUB_SUBNET_ID_1=$PUB_SUBNET_ID_1" >> $GITHUB_ENV
-```
-
-#### Public Subnet 2
-
-```sh
-PUB_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.1.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId")
-echo "PUB_SUBNET_ID_2=$PUB_SUBNET_ID_2" >> $GITHUB_ENV
-```
+----------
 
 ### Internet Gateway
 
 ```sh
-INTERNET_GATEWAY_ID=$(aws ec2 create-internet-gateway -region us-east-1 --query "InternetGateway.InternetGatewayId")
-echo "INTERNET_GATEWAY_ID=$INTERNET_GATEWAY_ID" >> $GITHUB_ENV
+INTERNET_GATEWAY_ID=$(aws ec2 create-internet-gateway --region us-east-1 --output "text" --query "InternetGateway.InternetGatewayId")
+echo "INTERNET_GATEWAY_ID=$INTERNET_GATEWAY_ID" # >> $GITHUB_ENV
 ```
 
 #### Attach Internet Gateway to VPC
 
 ```sh
-aws ec2 attach-internet-gateway -vpc-id $VPC_ID -internet-gateway-id $INTERNET_GATEWAY_ID -region us-east-1
+aws ec2 attach-internet-gateway --internet-gateway-id $INTERNET_GATEWAY_ID --vpc-id $VPC_ID --region us-east-1
 ```
 
-### Routes
-
-#### Create Route Table
-
-```sh
-ROUTE_TABLE_ID=$(aws ec2 create-route-table -vpc-id $VPC_ID -region us-east-1 --query "RouteTable.RouteTableId")
-echo "ROUTE_TABLE_ID=$ROUTE_TABLE_ID" >> $GITHUB_ENV
-```
-
-#### Create Public Route Table
-
-```sh
-PUBLIC_ROUTE_CREATED=$(aws ec2 create-route -route-table-id $ROUTE_TABLE_ID - destination-cidr-block 0.0.0.0/0 -gateway-id $INTERNET_GATEWAY_ID -region us-east-1)
-echo "PUBLIC_ROUTE_CREATED=$PUBLIC_ROUTE_CREATED" >> $GITHUB_ENV
-```
-
-#### Associate Route Table to Subnet
-
-```sh
-aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id $INTERNET_GATEWAY_ID -region us-east-1
-
-```
+----------
 
 ### Allocate Elastic IP
 
 ```sh
-aws ec2 allocate-address --domain vpc
+EXTERNAL_IP_ALLOCATION_ID=$(aws ec2 allocate-address --domain vpc --region us-east-1 --output "text" --query "AllocationId")
+echo "EXTERNAL_IP_ALLOCATION_ID=$EXTERNAL_IP_ALLOCATION_ID" # >> $GITHUB_ENV
 ```
 
-### Create NAT Gateway and Associate it with public Subnet
+----------
+
+### Create NAT Gateway and Associate it with Public Subnet
 
 ```sh
-aws ec2 create-nat-gateway --subnet-id subnet-XXXXXX --allocation-id eipalloc-XXXXXX
+NAT_GATEWAY_ID=$(aws ec2 create-nat-gateway --subnet-id $PUBLIC_SUBNET_ID --allocation-id $EXTERNAL_IP_ALLOCATION_ID --region us-east-1 --output "text" --query "NatGateway.NatGatewayId")
+echo "NAT_GATEWAY_ID=$NAT_GATEWAY_ID" # >> $GITHUB_ENV
 ```
+
+----------
+
+### Routes
+
+#### Create Route Table for Public Subnet
+
+```sh
+PUBLIC_ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --region us-east-1 --output "text" --query "RouteTable.RouteTableId")
+echo "PUBLIC_ROUTE_TABLE_ID=$PUBLIC_ROUTE_TABLE_ID" # >> $GITHUB_ENV
+```
+
+#### Create Route Table for Private Subnet
+
+```sh
+PRIVATE_ROUTE_TABLE_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID --region us-east-1 --output "text" --query "RouteTable.RouteTableId")
+echo "PRIVATE_ROUTE_TABLE_ID=$PRIVATE_ROUTE_TABLE_ID" # >> $GITHUB_ENV
+```
+
+#### Create Route to the Internet Gateway
+
+```sh
+HAS_INTERNET_ROUTE_BEEN_CREATED=$(aws ec2 create-route --route-table-id $PUBLIC_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $INTERNET_GATEWAY_ID  --region us-east-1 --output "text" --query "Return")
+echo "HAS_INTERNET_ROUTE_BEEN_CREATED=$HAS_INTERNET_ROUTE_BEEN_CREATED" # >> $GITHUB_ENV
+```
+
+#### Create Route to the NAT Gateway
+
+```sh
+HAS_NAT_ROUTE_BEEN_CREATED=$(aws ec2 create-route --region us-east-1 --route-table-id $PRIVATE_ROUTE_TABLE_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $NAT_GATEWAY_ID --output "text" --query "Return")
+echo "HAS_NAT_ROUTE_BEEN_CREATED=$HAS_NAT_ROUTE_BEEN_CREATED" # >> $GITHUB_ENV
+```
+
+#### Associate Route Table to Public Subnet
+
+```sh
+PUBLIC_ROUTE_TABLE_ASSOCIATION_ID=$(aws ec2 associate-route-table --region us-east-1 --route-table-id $PUBLIC_ROUTE_TABLE_ID --subnet-id $PUBLIC_SUBNET_ID --output "text" --query "AssociationId")
+echo "PUBLIC_ROUTE_TABLE_ASSOCIATION_ID=$PUBLIC_ROUTE_TABLE_ASSOCIATION_ID" # >> $GITHUB_ENV
+```
+
+#### Associate Route Table to Private Subnet
+
+```sh
+PRIVATE_ROUTE_TABLE_ASSOCIATION_ID=$(aws ec2 associate-route-table --region us-east-1 --route-table-id $PRIVATE_ROUTE_TABLE_ID --subnet-id $PRIVATE_SUBNET_ID --output "text" --query "AssociationId")
+echo "PRIVATE_ROUTE_TABLE_ASSOCIATION_ID=$PRIVATE_ROUTE_TABLE_ASSOCIATION_ID" # >> $GITHUB_ENV
+```
+
+----------
 
 ### Security Group
 
 ```sh
-aws ec2 create-security-group --group-name eks-node-group --description "EKS Node Group" --vpc-id $VPC_ID --output "text" --query "GroupId"
+SECURITY_GROUP_ID=$(aws ec2 create-security-group --region us-east-1 --group-name eks-security-group --description "EKS Security Group" --vpc-id $VPC_ID --output "text" --query "GroupId")
+echo "SECURITY_GROUP_ID=$SECURITY_GROUP_ID" # >> $GITHUB_ENV
 ```
 
 #### Authorize Security Group Ingresss (Inbound Trafic)
@@ -98,35 +124,22 @@ aws ec2 create-security-group --group-name eks-node-group --description "EKS Nod
 ##### Port 22
 
 ```sh
-aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 22 --cidr 0.0.0.0/0
+HAS_SSH_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$(aws ec2 authorize-security-group-ingress --region us-east-1 --group-id $SECURITY_GROUP_ID --protocol tcp --port 22 --cidr 0.0.0.0/0 --output "text" --query "Return")
+echo "HAS_SSH_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$HAS_SSH_BEEN_AUTHORIZED_TO_SECURITY_GROUP" # >> $GITHUB_ENV
 ```
 
 ##### Port 80
 
 ```sh
-aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 80 --cidr 0.0.0.0/0
+HAS_HTTP_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$(aws ec2 authorize-security-group-ingress --region us-east-1 --group-id $SECURITY_GROUP_ID --protocol tcp --port 80 --cidr 0.0.0.0/0 --output "text" --query "Return")
+echo "HAS_HTTP_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$HAS_HTTP_BEEN_AUTHORIZED_TO_SECURITY_GROUP" # >> $GITHUB_ENV
 ```
 
 ##### Port 443
 
 ```sh
-aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 443 --cidr 0.0.0.0/0
-```
-
-----------
-
-## EKS Cluster
-
-### Create Cluster
-
-```sh
-aws eks create-cluster --name eks-demo --role-arn "arn:aws:iam::008152407463:role/LabRole" --resources-vpc-config subnetIds=subnet-04570f251274be1b0,subnet-07148fe87dff0c263,securityGroupIds=sg-06cd8bfdadc807b3a
-```
-
-### Wait for cluster creation completition
-
-```sh
-aws eks wait cluster-active --name "eks-demo"
+HAS_HTTPS_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$(aws ec2 authorize-security-group-ingress --region us-east-1 --group-id $SECURITY_GROUP_ID --protocol tcp --port 443 --cidr 0.0.0.0/0 --output "text" --query "Return")
+echo "HAS_SSH_BEEN_AUTHORIZED_TO_SECURITY_GROUP=$HAS_SSH_BEEN_AUTHORIZED_TO_SECURITY_GROUP" # >> $GITHUB_ENV
 ```
 
 ----------
@@ -134,16 +147,31 @@ aws eks wait cluster-active --name "eks-demo"
 ### Create Cluster SSH Key Pair
 
 ```sh
-aws ec2 create-key-pair --key-name MyKeyPair
+aws ec2 create-key-pair --region us-east-1 --key-name eks-nodes-key-pair --output "text" --query "KeyPairId"
 ```
 
-```json
-{
-    "KeyFingerprint": "5f:ae:f5:ac:69:ba:fa:e5:2b:51:25:3a:54:ea:40:a6:3a:96:cc:d5",
-    "KeyMaterial": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA1t5Ai21Agw1JC66T0KW+prLeRIVI9GixpWZp4Kt3BrATtABI\nOveW0e++AAImSGwhLsepQABcFh7CtU4UNEF9FOkzuuz9OF5c5eLvpnOQImgEahg3\nf7+twcDUFNf5SagDXqkfW0JZ3KScotdYaBSMrt+1xE/aL8H56VINm2yM1RJqEkI+\nLVUaCutVgUWFU90NFrzwuOs3v8aB2freR+ZCwm8ZfwScXTD7/gd3Wkbcfi9wkm8c\nDfetY70vf47uy4rgQfSYiTXPUqq3sRYDAdOnZAZpfA8Ivur/2d8PhIYNw3gUlz19\noYbMYwmrwAL51DAnXfwqjyd1kPq4irOzcXz31wIDAQABAoIBADdEWYPDaTmMPEKl\n991OFJjaHzOuuNIs76ykiA1C7U2qEpdVDz8jmgaLzOpBo0kzjuFyd8U/knAaH2j1\nGVtLkPnE9gpZlNRf6TM0SQIebW98I86KRhQ04GOazrJBzxwz/BHoHGmjymtnZ+a2\nz0WOK5V7c0x4YZ2xHi/2bAuTQzI2nm/IZTVZpKY56ISz/gXYfqPiw/Kp/Nj+L3TK\n55Lywjmzeqdr6b9e9zndP/GCvIJU/qKVuuBnUj9StIhMGxecqUO2f22uiunYRiK+\nOAGpc5qLoSbHZxbrjJntv4rYevt50O/fMhagcyPCEDM7vPnbi3qOYYoWFpDrOt5y\n00EA+2ECgYEA+cH9C9rkgqfq0WCcckW426+0DNjtS6V2xVF+PqZCIKSlirj6tlpm\nkSpW7ya/rD7BByAiye/HjZ3aaQnc+UsKH2Qbx4DHlq/cd7A5tYf3bgp6IbBzNMeO\nrQnpqLALVl30ewcFkYygBOcnm3s5DNw3O63uq3J94dvf/oOvBhQRV2cCgYEA3D0I\nDjo4MD3U/sufgtSyqn6RWA+WawRpdKfLyRuwx/JbtTZZlHCEnFpXdznxEaVTVbH0\nZhIwBeppBtXoVg/9SP5J//jN06t1i6mfnvQqefQZIBOGHPp21NE6nWqsl3mb5GCL\nuOfVsqj0JsFpI3Lx/Y+OO0v9SmbZ4hwSTdgQRhECgYBnkuUHh40ACfa9QZ1fXj6d\nDC5UrZkqp8GrbnI2NOhzdRQZhUCjYrXqOW632o/eNGAEPnVu3PsaZX3v1WFIGLBn\n+DH0+BjNCr0Y/YHRIEOh5MJlOjFsj91BMT0u8WKiPHBonK7Yf0LVBa9NMTqldKWL\nIEQ74U0G3xHzEFUC5kuSvQKBgGY9jvfL3znF+pMuRCagRzEPALo4wkN8ENiu7NO3\nnyGzSQ+e44cdlPJgniojI95lOYKW0jZwSwrz/z3FH86ULaktI31JK4QQHMlxPUC1\naOKkhuV1KtVZEMFLQELDusu3EL+8ciCsv2/pLy6uqvhh7CUh941fgX6AsLVfAsBQ\nhX2BAoGBALjbxARnFxP0jAQVNrdnzNfFnVerPDZoH1yoRJNtu1xr7Od6IxUeVdTd\n6fdav5i9xN8lYHSaPBXurC9qCHs+67FN5y/aAQAftE3pni+7YJh6lap5rjwD/ZZC\nmOL3BwmXqBjrjSAmiql7m1GtNKO8iwWwwBKfMz9Wv70KLQ/iwj+Y\n-----END RSA PRIVATE KEY-----",
-    "KeyName": "MyKeyPair",
-    "KeyPairId": "key-0dc54e81940bb14d3"
-}
+----------
+
+
+## Retrieve Arn for Role "LabRole" (AWS Academy limitation)
+
+```sh
+LABROLE_ARN=$(aws iam list-roles --output text --query "Roles[?RoleName=='LabRole'].Arn")
+echo "LABROLE_ARN=$LABROLE_ARN" # >> $GITHUB_ENV
+```
+
+## EKS Cluster
+
+### Create Cluster
+
+```sh
+aws eks create-cluster --region us-east-1 --name eks-cluster --role-arn $LABROLE_ARN --resources-vpc-config subnetIds=$PUBLIC_SUBNET_ID,$PRIVATE_SUBNET_ID,securityGroupIds=$SECURITY_GROUP_ID
+```
+
+### Wait for Cluster creation completition
+
+```sh
+aws eks wait cluster-active --region us-east-1 --name "eks-cluster"
 ```
 
 ----------
@@ -151,17 +179,16 @@ aws ec2 create-key-pair --key-name MyKeyPair
 ### Create Node Group
 
 ```sh
-aws eks create-nodegroup --cluster-name eks-demo --nodegroup-name eks-demo-node-group --node-role "arn:aws:iam::008152407463:role/LabRole" --subnets "subnet-04570f251274be1b0" "subnet-07148fe87dff0c263" --scaling-config minSize=2,maxSize=2,desiredSize=2 --instance-types t3.medium --ami-type AL2_x86_64 --remote-access "ec2SshKey=MyKeyPair,sourceSecurityGroups=sg-06cd8bfdadc807b3a"
+aws eks create-nodegroup --region us-east-1 --cluster-name eks-cluster --nodegroup-name eks-node-group --node-role "arn:aws:iam::008152407463:role/LabRole" --subnets $PRIVATE_SUBNET_ID --scaling-config minSize=2,maxSize=2,desiredSize=2 --instance-types t3.medium --ami-type AL2_x86_64 --remote-access "ec2SshKey=eks-nodes-key-pair,sourceSecurityGroups=$SECURITY_GROUP_ID"
 ```
 
-### Wait for cluster creation completition
+### Wait for Node Group creation completition
 
 ```sh
-aws eks wait nodegroup-active --name "eks-demo-node-group"
+aws eks wait nodegroup-active --region us-east-1 --cluster-name eks-cluster --nodegroup-name eks-node-group
 ```
 
 ----------
-
 
 ### kubectl - Install and Configure
 
