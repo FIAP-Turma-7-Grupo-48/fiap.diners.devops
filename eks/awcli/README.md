@@ -1,309 +1,137 @@
-# Network
+# AWCLI EKS Multi Node Cluster Provisioning
 
-# VPC
+## Network
 
-```sh
-aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output "text" --query "Vpc.VpcId"
-````
-```json
-{
-    "Vpc": {
-        "CidrBlock": "10.0.0.0/16",
-        "DhcpOptionsId": "dopt-01cde0f9653a58ed2",
-        "State": "pending",
-        "VpcId": "vpc-00ea71bb2fa2415fe",
-        "OwnerId": "008152407463",
-        "InstanceTenancy": "default",
-        "Ipv6CidrBlockAssociationSet": [],
-        "CidrBlockAssociationSet": [
-            {
-                "AssociationId": "vpc-cidr-assoc-04405932cb6ca640e",
-                "CidrBlock": "10.0.0.0/16",
-                "CidrBlockState": {
-                    "State": "associated"
-                }
-            }
-        ],
-        "IsDefault": false
-    }
-}
-```
-## Subnets
-
-### Private Subnet 1
-```sh
-aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId"
-```
-
-```json
-{
-    "Subnet": {
-        "AvailabilityZone": "us-east-1a",
-        "AvailabilityZoneId": "use1-az4",
-        "AvailableIpAddressCount": 251,
-        "CidrBlock": "10.0.1.0/24",
-        "DefaultForAz": false,
-        "MapPublicIpOnLaunch": false,
-        "State": "available",
-        "SubnetId": "subnet-04570f251274be1b0",
-        "VpcId": "vpc-00ea71bb2fa2415fe",
-        "OwnerId": "008152407463",
-        "AssignIpv6AddressOnCreation": false,
-        "Ipv6CidrBlockAssociationSet": [],
-        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-04570f251274be1b0"
-    }
-}
-```
-### Private Subnet 2
+### VPC
 
 ```sh
-aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId"
+VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --output "text" --query "Vpc.VpcId")
+echo "VPC_ID=$VPC_ID" >> $GITHUB_ENV
 ```
 
-```json
-{
-    "Subnet": {
-        "AvailabilityZone": "us-east-1b",
-        "AvailabilityZoneId": "use1-az6",
-        "AvailableIpAddressCount": 251,
-        "CidrBlock": "10.0.2.0/24",
-        "DefaultForAz": false,
-        "MapPublicIpOnLaunch": false,
-        "State": "available",
-        "SubnetId": "subnet-07148fe87dff0c263",
-        "VpcId": "vpc-00ea71bb2fa2415fe",
-        "OwnerId": "008152407463",
-        "AssignIpv6AddressOnCreation": false,
-        "Ipv6CidrBlockAssociationSet": [],
-        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-07148fe87dff0c263"
-    }
-}
-```
+### Subnets
 
-### Private Subnet 1
-```sh
-aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.1.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId"
-```
-
-```json
-{
-    "Subnet": {
-        "AvailabilityZone": "us-east-1a",
-        "AvailabilityZoneId": "use1-az4",
-        "AvailableIpAddressCount": 251,
-        "CidrBlock": "10.0.1.0/24",
-        "DefaultForAz": false,
-        "MapPublicIpOnLaunch": false,
-        "State": "available",
-        "SubnetId": "subnet-04570f251274be1b0",
-        "VpcId": "vpc-00ea71bb2fa2415fe",
-        "OwnerId": "008152407463",
-        "AssignIpv6AddressOnCreation": false,
-        "Ipv6CidrBlockAssociationSet": [],
-        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-04570f251274be1b0"
-    }
-}
-```
-### public Subnet 2
+#### Private Subnet 1
 
 ```sh
-aws ec2 create-subnet --vpc-id "vpc-00ea71bb2fa2415fe" --cidr-block 10.1.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId"
+PRIV_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId")
+echo "PRIV_SUBNET_ID_1=$PRIV_SUBNET_ID_1" >> $GITHUB_ENV
 ```
 
-```json
-{
-    "Subnet": {
-        "AvailabilityZone": "us-east-1b",
-        "AvailabilityZoneId": "use1-az6",
-        "AvailableIpAddressCount": 251,
-        "CidrBlock": "10.0.2.0/24",
-        "DefaultForAz": false,
-        "MapPublicIpOnLaunch": false,
-        "State": "available",
-        "SubnetId": "subnet-07148fe87dff0c263",
-        "VpcId": "vpc-00ea71bb2fa2415fe",
-        "OwnerId": "008152407463",
-        "AssignIpv6AddressOnCreation": false,
-        "Ipv6CidrBlockAssociationSet": [],
-        "SubnetArn": "arn:aws:ec2:us-east-1:008152407463:subnet/subnet-07148fe87dff0c263"
-    }
-}
-```
-
-## Internet Gateway
+#### Private Subnet 2
 
 ```sh
-aws ec2 create-internet-gateway -region us-east-1
+PRIV_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId")
+echo "PRIV_SUBNET_ID_2=$PRIV_SUBNET_ID_2" >> $GITHUB_ENV
 ```
 
-```json
-
-```
-
-## Attach Internet Gateway to VPC
+#### Public Subnet 1
 
 ```sh
-aws ec2 attach-internet-gateway -vpc-id vpc-XXXXXX -internet-gateway-id igw-XXXXXX -region us-east-1
+PUB_SUBNET_ID_1=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.1.1.0/24 --availability-zone us-east-1a --output "text" --query "Subnet.SubnetId")
+echo "PUB_SUBNET_ID_1=$PUB_SUBNET_ID_1" >> $GITHUB_ENV
 ```
 
-```json
-
-```
-
-## Create Route Table
+#### Public Subnet 2
 
 ```sh
-aws ec2 create-route-table -vpc-id vpc-XXXXXX -region us-east-1
+PUB_SUBNET_ID_2=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.1.2.0/24 --availability-zone us-east-1b --output "text" --query "Subnet.SubnetId")
+echo "PUB_SUBNET_ID_2=$PUB_SUBNET_ID_2" >> $GITHUB_ENV
 ```
 
-```json
-
-```
-
-## Create Route Table
+### Internet Gateway
 
 ```sh
-aws ec2 create-route-table -vpc-id vpc-XXXXXX -region us-east-1
+INTERNET_GATEWAY_ID=$(aws ec2 create-internet-gateway -region us-east-1 --query "InternetGateway.InternetGatewayId")
+echo "INTERNET_GATEWAY_ID=$INTERNET_GATEWAY_ID" >> $GITHUB_ENV
 ```
 
-```json
-
-```
-
-## Create Public Route Table
+#### Attach Internet Gateway to VPC
 
 ```sh
-aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id igw-XXXXXX -region us-east-1
-
+aws ec2 attach-internet-gateway -vpc-id $VPC_ID -internet-gateway-id $INTERNET_GATEWAY_ID -region us-east-1
 ```
 
-```json
+### Routes
 
-```
-
-## Associate Route Table to Subnet
+#### Create Route Table
 
 ```sh
-aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id igw-XXXXXX -region us-east-1
+ROUTE_TABLE_ID=$(aws ec2 create-route-table -vpc-id $VPC_ID -region us-east-1 --query "RouteTable.RouteTableId")
+echo "ROUTE_TABLE_ID=$ROUTE_TABLE_ID" >> $GITHUB_ENV
+```
+
+#### Create Public Route Table
+
+```sh
+PUBLIC_ROUTE_CREATED=$(aws ec2 create-route -route-table-id $ROUTE_TABLE_ID - destination-cidr-block 0.0.0.0/0 -gateway-id $INTERNET_GATEWAY_ID -region us-east-1)
+echo "PUBLIC_ROUTE_CREATED=$PUBLIC_ROUTE_CREATED" >> $GITHUB_ENV
+```
+
+#### Associate Route Table to Subnet
+
+```sh
+aws ec2 create-route -route-table-id rtb-XXXXXX - destination-cidr-block 0.0.0.0/0 -gateway-id $INTERNET_GATEWAY_ID -region us-east-1
 
 ```
 
-```json
-
-```
-
-## Allocate Elastic IP
+### Allocate Elastic IP
 
 ```sh
 aws ec2 allocate-address --domain vpc
 ```
 
-```json
-
-```
-
-## Create NAT Gateway and Associate it with public Subnet
+### Create NAT Gateway and Associate it with public Subnet
 
 ```sh
 aws ec2 create-nat-gateway --subnet-id subnet-XXXXXX --allocation-id eipalloc-XXXXXX
 ```
 
-```json
-
-```
-
-## Security Group
+### Security Group
 
 ```sh
-aws ec2 create-security-group --group-name eks-node-group --description "EKS Node Group" --vpc-id "vpc-00ea71bb2fa2415fe" --output "text" --query "GroupId"
+aws ec2 create-security-group --group-name eks-node-group --description "EKS Node Group" --vpc-id $VPC_ID --output "text" --query "GroupId"
 ```
 
-```json
-{
-    "GroupId": "sg-06cd8bfdadc807b3a"
-}
-```
+#### Authorize Security Group Ingresss (Inbound Trafic)
 
-### Authorize Security Group Ingresss (Inbound Trafic)
+##### Port 22
 
-#### Port 22
 ```sh
 aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 22 --cidr 0.0.0.0/0
 ```
 
-#### Port 80
+##### Port 80
+
 ```sh
 aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 80 --cidr 0.0.0.0/0
 ```
 
-#### Port 443
+##### Port 443
+
 ```sh
 aws ec2 authorize-security-group-ingress --group-id "sg-06cd8bfdadc807b3a" --protocol tcp --port 443 --cidr 0.0.0.0/0
 ```
 
-# EKS Cluster
+----------
 
-## Create Cluster
+## EKS Cluster
+
+### Create Cluster
 
 ```sh
 aws eks create-cluster --name eks-demo --role-arn "arn:aws:iam::008152407463:role/LabRole" --resources-vpc-config subnetIds=subnet-04570f251274be1b0,subnet-07148fe87dff0c263,securityGroupIds=sg-06cd8bfdadc807b3a
 ```
 
-```json
-{
-    "cluster": {
-        "name": "eks-demo",
-        "arn": "arn:aws:eks:us-east-1:008152407463:cluster/eks-demo",
-        "createdAt": "2024-12-06T04:29:06.823000-08:00",
-        "version": "1.31",
-        "roleArn": "arn:aws:iam::008152407463:role/LabRole",
-        "resourcesVpcConfig": {
-            "subnetIds": [
-                "subnet-04570f251274be1b0",
-                "subnet-07148fe87dff0c263"
-            ],
-            "securityGroupIds": [
-                "sg-06cd8bfdadc807b3a"
-            ],
-            "vpcId": "vpc-00ea71bb2fa2415fe",
-            "endpointPublicAccess": true,
-            "endpointPrivateAccess": false,
-            "publicAccessCidrs": [
-                "0.0.0.0/0"
-            ]
-        },
-        "kubernetesNetworkConfig": {
-            "serviceIpv4Cidr": "172.20.0.0/16"
-        },
-        "logging": {
-            "clusterLogging": [
-                {
-                    "types": [
-                        "api",
-                        "audit",
-                        "authenticator",
-                        "controllerManager",
-                        "scheduler"
-                    ],
-                    "enabled": false
-                }
-            ]
-        },
-        "status": "CREATING",
-        "certificateAuthority": {},
-        "platformVersion": "eks.12",
-        "tags": {}
-    }
-}
-```
-
-## Wait for cluster creation completition
+### Wait for cluster creation completition
 
 ```sh
 aws eks wait cluster-active --name "eks-demo"
 ```
 
-## Create Cluster SSH Key Pair
+----------
+
+### Create Cluster SSH Key Pair
 
 ```sh
 aws ec2 create-key-pair --key-name MyKeyPair
@@ -318,61 +146,24 @@ aws ec2 create-key-pair --key-name MyKeyPair
 }
 ```
 
-## Create Node Group
+----------
+
+### Create Node Group
 
 ```sh
 aws eks create-nodegroup --cluster-name eks-demo --nodegroup-name eks-demo-node-group --node-role "arn:aws:iam::008152407463:role/LabRole" --subnets "subnet-04570f251274be1b0" "subnet-07148fe87dff0c263" --scaling-config minSize=2,maxSize=2,desiredSize=2 --instance-types t3.medium --ami-type AL2_x86_64 --remote-access "ec2SshKey=MyKeyPair,sourceSecurityGroups=sg-06cd8bfdadc807b3a"
 ```
 
-```json
-{
-    "nodegroup": {
-        "nodegroupName": "eks-demo-node-group",
-        "nodegroupArn": "arn:aws:eks:us-east-1:008152407463:nodegroup/eks-demo/eks-demo-node-group/04c9cdfd-20b4-fd34-a158-69eac37505d6",
-        "clusterName": "eks-demo",
-        "version": "1.31",
-        "releaseVersion": "1.31.2-20241121",
-        "createdAt": "2024-12-06T04:38:10.361000-08:00",
-        "modifiedAt": "2024-12-06T04:38:10.361000-08:00",
-        "status": "CREATING",
-        "capacityType": "ON_DEMAND",
-        "scalingConfig": {
-            "minSize": 2,
-            "maxSize": 2,
-            "desiredSize": 2
-        },
-        "instanceTypes": [∏
-            "t3.medium"
-        ],
-        "subnets": [
-            "subnet-04570f251274be1b0",
-            "subnet-07148fe87dff0c263"
-        ],
-        "remoteAccess": {
-            "ec2SshKey": "MyKeyPair",
-            "sourceSecurityGroups": [
-                "sg-06cd8bfdadc807b3a"
-            ]
-        },
-        "amiType": "AL2_x86_64",
-        "nodeRole": "arn:aws:iam::008152407463:role/LabRole",
-        "diskSize": 20,
-        "health": {
-            "issues": []
-        },
-        "tags": {}
-    }
-}
-```
-
-## Wait for cluster creation completition
+### Wait for cluster creation completition
 
 ```sh
 aws eks wait nodegroup-active --name "eks-demo-node-group"
 ```
 
+----------
 
-## kubectl - Install and Configure
+
+### kubectl - Install and Configure
 
 ```sh
 
