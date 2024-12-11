@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mssql-data-2
-  namespace: mssql-fiap-sa
+  namespace: mssql
 spec:
   storageClassName: manual
   accessModes:

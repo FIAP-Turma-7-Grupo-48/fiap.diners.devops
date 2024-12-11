@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mssql-service
-  namespace: mssql-fiap-sa
+  namespace: mssql
 spec:
   selector:
     app: mssql
