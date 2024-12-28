@@ -3,10 +3,12 @@ kind: PersistentVolumeClaim
 metadata:
   name: rabbitmq-pvc
   namespace: rabbitmq
+  labels:
+    app: rabbitmq
+    context: fiap-diners
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi 
-  storageClassName: "fiap-sa-storage" 
+      storage: 1Gi

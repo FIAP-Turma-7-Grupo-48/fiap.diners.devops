@@ -5,6 +5,7 @@ metadata:
   namespace: rabbitmq
   labels:
     app: rabbitmq
+    context: fiap-diners
 spec:
   selector:
     app: rabbitmq
